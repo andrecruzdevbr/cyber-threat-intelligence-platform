@@ -1,0 +1,13 @@
+cyber_threat:
+  target: dev
+
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DBT_HOST', 'localhost') }}"
+      user: "{{ env_var('DBT_USER', 'cyber_user') }}"
+      password: "{{ env_var('DBT_PASSWORD', 'change_me') }}"
+      port: "{{ env_var('DBT_PORT', '5433') | int }}"
+      dbname: "{{ env_var('DBT_DATABASE', 'cyber_threat') }}"
+      schema: public
+      threads: 4

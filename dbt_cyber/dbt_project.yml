@@ -1,0 +1,14 @@
+name: "cyber_threat"
+version: "1.0.0"
+config-version: 2
+
+profile: "cyber_threat"
+
+model-paths: ["models"]
+
+models:
+  cyber_threat:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: stg_predictions
+    columns:
+      - name: id
+        tests:
+          - not_null
+          - unique
+
+      - name: class
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BENIGN", "DDoS"]
+
+      - name: probability_benign
+        tests:
+          - not_null
+
+      - name: probability_ddos
+        tests:
+          - not_null
+
+      - name: created_at
+        tests:
+          - not_null
+
+  - name: dim_threat_summary
+    columns:
+      - name: class
+        tests:
+          - not_null
+          - unique
+
+      - name: total_predictions
+        tests:
+          - not_null
+
+  - name: fct_prediction_metrics
+    columns:
+      - name: id
+        tests:
+          - not_null
+          - unique
+
+      - name: ddos_rate_percent
+        tests:
+          - not_null
