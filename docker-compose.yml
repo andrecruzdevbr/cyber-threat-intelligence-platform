@@ -86,8 +86,10 @@ services:
     image: apache/spark:3.5.3
     container_name: cyber-threat-spark-consumer
     depends_on:
-      - kafka
-      - api
+      kafka-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
     volumes:
       - ./streaming:/opt/spark/work-dir/streaming
       - ./data_lake:/opt/spark/work-dir/data_lake

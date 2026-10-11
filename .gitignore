@@ -32,7 +32,6 @@ dbt_cyber/logs/
 dbt_cyber/.user.yml
 dbt_cyber/dbt_packages/
 dbt_cyber/profiles.yml
-dbt_cyber/profiles.yml.example
 
 data_lake/checkpoints/
 
@@ -60,4 +59,3 @@ Thumbs.db
 !mlflow/
 !dbt_cyber/dbt_project.yml
 !dbt_cyber/models/
-!dbt_cyber/profiles.yml.example

@@ -61,22 +61,32 @@ A solução combina os principais componentes abaixo:
 
 ```mermaid
 flowchart LR
-    A[CICIDS2017 Dataset] --> B[Kafka]
+    A[CICIDS2017 / producer] --> B[Kafka]
     B --> C[Spark Structured Streaming]
+
     C --> D[Data Lake Bronze]
-    D --> E[Data Lake Silver]
-    E --> F[Data Lake Gold]
-    F --> G[FastAPI /predict]
-    G --> H[PostgreSQL]
-    G --> I[Random Forest Model]
-    I --> J[Classificação BENIGN x DDoS]
-    J --> K[dbt + SQL]
-    K --> L[Airflow]
-    G --> M[MLflow]
-    J --> N[RAG + Knowledge Base]
-    N --> O[Ollama / Llama 3.2 3B]
-    H --> P[Streamlit Dashboard]
-    J --> Q[Análise de incidente]
+    C --> E[Data Lake Silver]
+    C --> F[Data Lake Gold]
+
+    C --> G[FastAPI]
+    G --> H[Random Forest]
+    H --> I[Classificação BENIGN / DDoS]
+    I --> J[PostgreSQL]
+
+    I -->|DDoS| K[Incident Assistant]
+    K --> L[RAG / Knowledge Base]
+    L --> M[Ollama / Llama 3.2 3B]
+
+    J --> N[dbt]
+    N --> O[Modelos analíticos / Data Quality]
+
+    J --> P[Streamlit Dashboard]
+
+    Q[Airflow] --> R[dbt run]
+    R --> S[dbt test]
+
+    H --> T[MLflow Experiment Tracking]
+    T --> U[Experimentos / artefatos]
 ```
 
 
@@ -129,7 +139,7 @@ O modelo de baseline foi construído com Logistic Regression para estabelecer um
 
 O modelo final adotado foi Random Forest, por apresentar melhor capacidade de separar padrões de tráfego malicioso e benigno no conjunto CICIDS2017.
 
-Além disso, a análise de redundância reduziu o conjunto de features de 68 para 64, eliminando variáveis com baixa contribuição ou excesso de redundância.
+A redução de 68 para 64 features foi realizada após análise de redundância e correlação exata entre variáveis, preservando as características finais mais informativas e evitando duplicidade de sinal em atributos altamente correlacionados.
 
 ### Métricas finais do Random Forest
 
@@ -190,11 +200,7 @@ A camada SQL foi usada para:
 
 ## dbt
 
-O projeto inclui um projeto dbt em `dbt_cyber/`, com estrutura correta e organizada:
-
-- `dbt_project.yml`
-- `profiles.yml`
-- `models/`
+O repositório público inclui o projeto dbt em `dbt_cyber/` com a estrutura de código e modelos versionados. A configuração real do banco local fica em `profiles.yml`, que é um arquivo local e não é publicado no GitHub. O arquivo público disponibilizado para reprodução é `profiles.yml.example`.
 
 A estrutura do dbt foi mantida na pasta `dbt_cyber/` conforme a organização real do projeto. O uso do dbt permite:
 
@@ -212,17 +218,24 @@ O pipeline dbt implementa 13 testes de qualidade de dados, cobrindo validações
 - accepted_values
 - integridade de colunas e métricas
 
-Esses testes foram executados com sucesso no ambiente local, conforme evidência de logs da execução do dbt.
+Esses testes podem ser executados localmente com a configuração correta do ambiente de banco. O arquivo `profiles.yml` real permanece local e fora do GitHub.
 
 
 ## Airflow
 
-O Airflow orquestra os fluxos de dados e integra o contexto de pipelines e dbt com a arquitetura geral. O ambiente foi configurado para gerir a parte operacional do projeto e facilitar a execução e monitoramento de jobs.
+O Airflow atualmente orquestra o workflow analítico do projeto, executando as etapas de dbt, em especial:
+
+- `dbt run`
+- `dbt test`
+
+Ele não é responsável por controlar Kafka, Spark ou toda a arquitetura em tempo real da plataforma. O papel principal do Airflow aqui é a automação do processamento analítico e da validação de qualidade de dados.
 
 
 ## MLflow
 
-O MLflow foi incluído para rastrear experimentos, metadados e artefatos relacionados ao treinamento e à evolução dos modelos. Essa camada melhora a reprodutibilidade e a gestão do ciclo de vida do modelo.
+O MLflow foi incluído para rastrear experimentos, metadados e artefatos relacionados ao treinamento e à evolução do modelo. Essa camada melhora a reprodutibilidade, a análise comparativa de experimentos e o registro de artefatos do pipeline de ML.
+
+A implementação atual foca em experiment tracking e logging de artefatos/modelo; não há um Model Registry de produção ou versionamento de deploy formal implementado neste estágio.
 
 
 ## Streamlit
@@ -237,7 +250,9 @@ O dashboard permite a visualização dos resultados e do comportamento do sistem
 
 ## RAG
 
-O módulo RAG permite recuperar contexto a partir de uma base de conhecimento e gerar respostas baseadas em documentação do domínio de segurança. O uso de recuperação + geração ajuda a transformar uma detecção técnica em explicação accionável.
+A implementação atual é um RAG leve, com base em documentação em Markdown e recuperação simples baseada em correspondência de palavras. O contexto recuperado é enviado ao modelo Llama 3.2 via Ollama para geração de resposta contextualizada.
+
+Essa abordagem é adequada para demonstração e automação local, mas não implementa vector database, embeddings nem semantic search. Esses recursos podem ser evoluídos no futuro para uma solução de recuperação mais robusta e escalável.
 
 
 ## Ollama
@@ -282,42 +297,31 @@ O projeto pode ser executado via Docker Compose, com orquestração centralizada
 
 ```text
 .
-├── app.py
+├── .env.example
+├── .gitignore
+├── Cyber_Threat_Intelligence_Platform.ipynb
 ├── Dockerfile
+├── README.md
+├── app.py
 ├── docker-compose.yml
 ├── requirements.txt
-├── Cyber_Threat_Intelligence_Platform.ipynb
 ├── random_forest_ddos_model.pkl
 ├── model_features.pkl
-├── CICIDS2017_DDoS.parquet
-├── CICIDS2017_DDoS_Silver.parquet
-├── sql/
-│   └── init.sql
+├── test_app.py
+├── airflow/
+├── dashboard/
 ├── dbt_cyber/
 │   ├── dbt_project.yml
-│   ├── profiles.yml
+│   ├── profiles.yml.example
 │   └── models/
-├── airflow/
-│   ├── dags/
-│   ├── Dockerfile
-│   ├── plugins/
-│   └── logs/
-├── dashboard/
-│   ├── app.py
-│   └── Dockerfile
-├── streaming/
-├── data_lake/
-├── rag/
-│   ├── knowledge_base/
-│   ├── rag_engine.py
-│   └── incident_assistant.py
 ├── mlflow/
-├── test_app.py
-├── test_ddos_api.py
+├── rag/
+├── sql/
+├── streaming/
 └── README.md
 ```
 
-A estrutura foi respeitada conforme a organização real do projeto. O objetivo foi evitar qualquer movimento ou alteração de arquivos sem necessidade.
+Os arquivos e diretórios listados abaixo são gerados ou usados localmente e ficam ignorados pelo GitHub: `.env`, `dbt_cyber/profiles.yml`, `CICIDS2017_DDoS.parquet`, `CICIDS2017_DDoS_Silver.parquet`, `data_lake/`, `mlruns/`, `mlflow.db`, `test_ddos_api.py`, `airflow/logs/`, `dbt_cyber/target/` e `dbt_cyber/logs/`.
 
 
 ## Exemplo real de resposta da API
@@ -332,12 +336,18 @@ Abaixo está um exemplo real já obtido em execução do endpoint de predição:
   "probability_benign": 0.0,
   "probability_ddos": 1.0,
   "created_at": "2024-xx-xxTxx:xx:xx.xxxxxx",
-  "knowledge_source": "ddos.md",
-  "analysis": "O sistema identificou um incidente de DDoS com alta probabilidade. O impacto principal é a indisponibilidade de serviços. Recomenda-se reforçar proteção de rede, limitar tráfego malicioso e revisar logs de infraestrutura."
+  "incident_analysis": {
+    "status": "threat_detected",
+    "class": "DDoS",
+    "probability_ddos": 1.0,
+    "created_at": "2024-xx-xxTxx:xx:xx.xxxxxx",
+    "knowledge_source": "ddos.md",
+    "analysis": "O sistema identificou um incidente de DDoS com alta probabilidade. O impacto principal é a indisponibilidade de serviços. Recomenda-se reforçar proteção de rede, limitar tráfego malicioso e revisar logs de infraestrutura."
+  }
 }
 ```
 
-O campo `analysis` foi resumido para manter o README bem organizado e profissional, sem perder o valor do entendimento do fluxo.
+Este é um exemplo real de resposta local do endpoint, com o campo `analysis` resumido para manter a documentação clara e profissional.
 
 
 ## Como executar
@@ -345,42 +355,70 @@ O campo `analysis` foi resumido para manter o README bem organizado e profission
 ### 1. Clonar o repositório
 
 ```bash
-git clone <repositorio>
+git clone https://github.com/andrecruzdevbr/cyber-threat-intelligence-platform.git
 cd cyber-threat-intelligence-platform
 ```
 
-### 2. Instalar dependências
+### 2. Preparar o arquivo de ambiente local
+
+Antes do primeiro start, copie o arquivo de exemplo para `.env` e ajuste a senha local do PostgreSQL, se necessário.
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Linux/macOS:
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env` conforme sua instalação local e ajuste `POSTGRES_PASSWORD` antes da primeira inicialização.
+
+### 3. Instalar dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Iniciar com Docker Compose
+### 4. Iniciar com Docker Compose
 
 ```bash
 docker compose up -d
 ```
 
-O tópico Kafka `network-traffic` é criado automaticamente durante a inicialização do ambiente. O Spark consumer também pode ser iniciado via Compose, sem necessidade de executar `kafka-topics.sh` manualmente ou montar `/tmp/.ivy2` manualmente.
+O tópico Kafka `network-traffic` é criado automaticamente durante a inicialização do ambiente. O Spark consumer também pode ser iniciado via Compose, sem necessidade de executar `kafka-topics.sh` manualmente ou criar `/tmp/.ivy2` manualmente.
 
-### 4. Acessar os serviços
+### 5. Acessar os serviços
 
 - API: http://localhost:8001
 - Dashboard: http://localhost:8501
 - Airflow: http://localhost:8080
 - PostgreSQL: localhost:5433
 
-### 5. Iniciar o consumer do Spark
+### 6. Iniciar o consumer do Spark
 
 ```bash
 docker compose up -d spark-consumer
 ```
 
-### 6. Testar a API
+### 7. Confirmar a API
 
 ```bash
-python test_ddos_api.py
+curl http://127.0.0.1:8001/
 ```
+
+### 8. Ollama
+
+O Ollama deve estar instalado no host e o modelo precisa estar disponível localmente:
+
+```bash
+ollama pull llama3.2:3b
+```
+
+Se o producer for usado localmente, ele depende do dataset `CICIDS2017_DDoS_Silver.parquet`, que não está incluído no GitHub e deve existir na máquina local do usuário.
 
 
 ## Limitações
